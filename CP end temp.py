@@ -22,10 +22,17 @@ query = """ SELECT
                 ,[CUSTOMER_CODE] AS [Recipe]
                 ,AVG([FINAL_TEMP_ROASTING] / 10.0) AS [End temp]
             FROM [dbo].[PRO_EXP_BATCH_DATA_ROASTER]
+			WHERE DATEADD(d,DATEDIFF(d,0,[RECORDING_DATE]),0) > DATEADD(d,DATEDIFF(d,0,GETDATE())-365,0)
+                AND [CUSTOMER_CODE] = '10401005'
+                AND [ROASTER] = 'R2'
             GROUP BY
             	DATEADD(d,DATEDIFF(d,0,[RECORDING_DATE]),0)
             	,[ROASTER]
-                ,[CUSTOMER_CODE] """
+                ,[CUSTOMER_CODE]
+            ORDER BY
+                DATEADD(d,DATEDIFF(d,0,[RECORDING_DATE]),0) ASC
+                ,[CUSTOMER_CODE] ASC           	
+                ,[ROASTER] ASC"""
 
 # Read query and create Profit calculation:
 df = pd.read_sql(query, con)
