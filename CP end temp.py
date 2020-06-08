@@ -32,7 +32,7 @@ query = """ SELECT
             ORDER BY
                 DATEADD(d,DATEDIFF(d,0,[RECORDING_DATE]),0) ASC
                 ,[CUSTOMER_CODE] ASC           	
-                ,[ROASTER] ASC"""
+                ,[ROASTER] ASC """
 
 # Read query and create Profit calculation:
 df = pd.read_sql(query, con)
@@ -44,6 +44,28 @@ print(df)
 now = datetime.datetime.now()
 scriptName = 'CP end temp.py'
 executionId = int(now.timestamp())
-tType = 'Change point detection, end temperature'
+sType = 'Change point detection, end temperature'
 roasters = df.ROASTER.unique()
 recipes = df.Recipe.unique()
+
+for recipe in recipes:
+        for roaster in roasters:
+            #Filter dataframe
+            dfEndTemp = df.loc[df['Recipe'] == recipe]
+            dfEndTemp = dfEndTemp.loc[df['ROASTER'] == roaster]
+            #Calculate mean for filtered dataframe
+            endTempAvg = dfEndTemp['End temp'].mean()
+            #Subtract mean from each datapoint
+            dfEndTemp['End temp subtracted mean'] = dfEndTemp['End temp'] - endTempAvg
+            
+            dfEndTemp['CumSum end temp diff'] = dfEndTemp['End temp subtracted mean'].cumsum()
+            #dfEndTemp['CumSum diff'] = dfEndTemp.cumsum(axis='End temp subtracted mean')
+
+            endTempRows = dfEndTemp.index.max() #No. of rows in dataframe for iteration
+
+            
+            
+            print(dfEndTemp)
+            print(endTempAvg)
+            print(endTempRows)
+            dfEndTemp.plot(x='Date',y='CumSum end temp diff')
