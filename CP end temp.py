@@ -6,7 +6,7 @@ import pyodbc
 import datetime
 
 
-#Read login details for Probat
+# Read login details for Probat
 credentials = pd.read_excel(r'\\filsrv01\bki\11. Økonomi\04 - Controlling\NMO\22. Python\Credentials\Credentials.xlsx', header=0, index_col='Program').to_dict()
 user = credentials['User']['Probat read']
 password = credentials['Password']['Probat read']
@@ -50,14 +50,16 @@ recipes = df.Recipe.unique()
 
 for recipe in recipes:
         for roaster in roasters:
-            #Filter dataframe
+            # Filter dataframe
             dfEndTemp = df.loc[df['Recipe'] == recipe]
             dfEndTemp = dfEndTemp.loc[df['ROASTER'] == roaster]
-            #Calculate mean for filtered dataframe
+            # Calculate mean for filtered dataframe
             endTempAvg = dfEndTemp['End temp'].mean()
-            #Subtract mean from each datapoint and sum cumulative
+            # Subtract mean from each datapoint and sum cumulative
             dfEndTemp['End temp subtracted mean'] = dfEndTemp['End temp'] - endTempAvg
             dfEndTemp['CumSum end temp diff'] = dfEndTemp['End temp subtracted mean'].cumsum()
+            # Find max and min values of end temp subtracted mean
+            endTempDiff = dfEndTemp['End temp subtracted mean'].max() - dfEndTemp['End temp subtracted mean'].min()
             
 
             endTempRows = dfEndTemp.index.max() #No. of rows in dataframe for iteration
@@ -67,4 +69,5 @@ for recipe in recipes:
             print(dfEndTemp)
             print(endTempAvg)
             print(endTempRows)
+            print(endTempDiff)
             dfEndTemp.plot(x='Date',y='CumSum end temp diff')
