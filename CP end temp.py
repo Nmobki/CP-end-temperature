@@ -55,11 +55,10 @@ for recipe in recipes:
             dfEndTemp = dfEndTemp.loc[df['ROASTER'] == roaster]
             #Calculate mean for filtered dataframe
             endTempAvg = dfEndTemp['End temp'].mean()
-            #Subtract mean from each datapoint
+            #Subtract mean from each datapoint and sum cumulative
             dfEndTemp['End temp subtracted mean'] = dfEndTemp['End temp'] - endTempAvg
-            
             dfEndTemp['CumSum end temp diff'] = dfEndTemp['End temp subtracted mean'].cumsum()
-            #dfEndTemp['CumSum diff'] = dfEndTemp.cumsum(axis='End temp subtracted mean')
+            
 
             endTempRows = dfEndTemp.index.max() #No. of rows in dataframe for iteration
 
