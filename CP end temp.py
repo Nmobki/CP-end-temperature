@@ -70,4 +70,6 @@ for recipe in recipes:
             print(endTempAvg)
             print(endTempRows)
             print(endTempDiff)
+
+            # For development purposes only
             dfEndTemp.plot(x='Date',y='CumSum end temp diff')
