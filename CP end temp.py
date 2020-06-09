@@ -45,32 +45,53 @@ S_Type = 'Change point detection, end temperature'
 Roasters = Df.ROASTER.unique()
 Recipes = Df.Recipe.unique()
 
+# Lav en function der laver increment på dictionary med keys over, under, lig med
+Count_Diff = {}
+
+def diff_counter(dictionary, recipe, Diff_Org, Diff_New):
+    dictionary[recipe]['Org greater']['Count'] = 0
+    dictionary[recipe]['Equal']['Count'] = 0
+    dictionary[recipe]['Org lower']['Count'] = 0
+    dictionary[recipe]['Total']['Count'] = 0
+    if Diff_Org > Diff_New:
+        dictionary[recipe]['Org greater']['Count'] += 1
+    if Diff_Org == Diff_New:
+        dictionary[recipe]['Equal']['Count'] += 1
+    if Diff_Org < Diff_New:
+        dictionary[recipe]['Org lower']['Count'] += 1
+    dictionary[recipe]['Total']['Count'] += 1
+    
+
 for Recipe in Recipes:
         for Roaster in Roasters:
             # Filter dataframe
             Df_EndTemp = Df.loc[Df['Recipe'] == Recipe]
             Df_EndTemp = Df_EndTemp.loc[Df['ROASTER'] == Roaster]
             # Calculate mean for filtered dataframe
-            Avg_EndTemp_Org = Df_EndTemp['End temp'].mean()
+            Avg_EndTemp = Df_EndTemp['End temp'].mean()
             # Subtract mean from each datapoint and sum cumulative
-            Df_EndTemp['End temp subtracted mean'] = Df_EndTemp['End temp'] - Avg_EndTemp_Org
+            Df_EndTemp['End temp subtracted mean'] = Df_EndTemp['End temp'] - Avg_EndTemp
             Df_EndTemp['CumSum end temp diff'] = Df_EndTemp['End temp subtracted mean'].cumsum()
             # Find max and min values of end temp subtracted mean
             Diff_EndTemp_Org = Df_EndTemp['CumSum end temp diff'].max() - Df_EndTemp['CumSum end temp diff'].min()
             
             # Create reordered dataframe, repeat calculations
             i = 0
-            for i in range(1,1000):
-                
+            for i in range(1000):
                 Df_Temp = Df_EndTemp.sample(frac=1, replace=False, random_state=random.randint(1,999999))
+                Df_Temp['CumSum end temp diff'] = Df_Temp['End temp subtracted mean'].cumsum()
+                # Find max and min values of end temp subtracted mean
+                Diff_Temp_Temp = Df_Temp['CumSum end temp diff'].max() - Df_Temp['CumSum end temp diff'].min()
+                diff_counter(Count_Diff, Recipe, Diff_EndTemp_Org, Diff_Temp_Temp)
+                
                 i += 1
-                print(i)
+                print(Count_Diff)
             
             endTempRows = Df_EndTemp.index.max() #No. of rows in dataframe for iteration
 
 
             print(Df_EndTemp)
-            print(Avg_EndTemp_Org)
+            print(Avg_EndTemp)
             print(endTempRows)
             print(Diff_EndTemp_Org)
             print(Df_Temp)
