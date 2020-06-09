@@ -4,18 +4,19 @@ from sqlalchemy import create_engine
 import pandas as pd
 import pyodbc
 import datetime
+import random
 
 # Read login details for Probat
-credentials = pd.read_excel(r'\\filsrv01\bki\11. Økonomi\04 - Controlling\NMO\22. Python\Credentials\Credentials.xlsx', header=0, index_col='Program').to_dict()
-user = credentials['User']['Probat read']
-password = credentials['Password']['Probat read']
+Credentials = pd.read_excel(r'\\filsrv01\bki\11. Økonomi\04 - Controlling\NMO\22. Python\Credentials\Credentials.xlsx', header=0, index_col='Program').to_dict()
+User = Credentials['User']['Probat read']
+Password = Credentials['Password']['Probat read']
 
 
 # Define server connection and SQL query:
-server = '192.168.125.161'
-db = 'BKI_IMP_EXP'
-con = pyodbc.connect('DRIVER={SQL Server};SERVER=' + server + ';DATABASE=' + db + ';UID=' + user + ';PWD=' + password)
-query = """ SELECT
+Server = '192.168.125.161'
+Db = 'BKI_IMP_EXP'
+Con = pyodbc.connect('DRIVER={SQL Server};SERVER=' + Server + ';DATABASE=' + Db + ';UID=' + User + ';PWD=' + Password)
+Query = """ SELECT
             	DATEADD(d,DATEDIFF(d,0,[RECORDING_DATE]),0) AS [Date]
             	,[ROASTER]
                 ,[CUSTOMER_CODE] AS [Recipe]
@@ -34,37 +35,45 @@ query = """ SELECT
                 ,[ROASTER] ASC """
 
 # Read query into dataframe:
-df = pd.read_sql(query, con)
+Df = pd.read_sql(Query, Con)
 
 # Create timestamp and other variables
-now = datetime.datetime.now()
-scriptName = 'CP end temp.py'
-executionId = int(now.timestamp())
-sType = 'Change point detection, end temperature'
-roasters = df.ROASTER.unique()
-recipes = df.Recipe.unique()
+Now = datetime.datetime.now()
+ScriptName = 'CP end temp.py'
+ExecutionId = int(Now.timestamp())
+S_Type = 'Change point detection, end temperature'
+Roasters = Df.ROASTER.unique()
+Recipes = Df.Recipe.unique()
 
-for recipe in recipes:
-        for roaster in roasters:
+for Recipe in Recipes:
+        for Roaster in Roasters:
             # Filter dataframe
-            dfEndTemp = df.loc[df['Recipe'] == recipe]
-            dfEndTemp = dfEndTemp.loc[df['ROASTER'] == roaster]
+            Df_EndTemp = Df.loc[Df['Recipe'] == Recipe]
+            Df_EndTemp = Df_EndTemp.loc[Df['ROASTER'] == Roaster]
             # Calculate mean for filtered dataframe
-            endTempAvg = dfEndTemp['End temp'].mean()
+            Avg_EndTemp_Org = Df_EndTemp['End temp'].mean()
             # Subtract mean from each datapoint and sum cumulative
-            dfEndTemp['End temp subtracted mean'] = dfEndTemp['End temp'] - endTempAvg
-            dfEndTemp['CumSum end temp diff'] = dfEndTemp['End temp subtracted mean'].cumsum()
+            Df_EndTemp['End temp subtracted mean'] = Df_EndTemp['End temp'] - Avg_EndTemp_Org
+            Df_EndTemp['CumSum end temp diff'] = Df_EndTemp['End temp subtracted mean'].cumsum()
             # Find max and min values of end temp subtracted mean
-            endTempDiff = dfEndTemp['End temp subtracted mean'].max() - dfEndTemp['End temp subtracted mean'].min()
+            Diff_EndTemp_Org = Df_EndTemp['CumSum end temp diff'].max() - Df_EndTemp['CumSum end temp diff'].min()
+            
+            # Create reordered dataframe, repeat calculations
+            i = 0
+            for i in range(1,1000):
+                
+                Df_Temp = Df_EndTemp.sample(frac=1, replace=False, random_state=random.randint(1,999999))
+                i += 1
+                print(i)
+            
+            endTempRows = Df_EndTemp.index.max() #No. of rows in dataframe for iteration
 
 
-            endTempRows = dfEndTemp.index.max() #No. of rows in dataframe for iteration
-
-
-            print(dfEndTemp)
-            print(endTempAvg)
+            print(Df_EndTemp)
+            print(Avg_EndTemp_Org)
             print(endTempRows)
-            print(endTempDiff)
+            print(Diff_EndTemp_Org)
+            print(Df_Temp)
 
             # For development purposes only
-            dfEndTemp.plot(x='Date',y='CumSum end temp diff')
+            Df_EndTemp.plot(x='Date',y='CumSum end temp diff')
