@@ -5,7 +5,6 @@ import pandas as pd
 import pyodbc
 import datetime
 
-
 # Read login details for Probat
 credentials = pd.read_excel(r'\\filsrv01\bki\11. Økonomi\04 - Controlling\NMO\22. Python\Credentials\Credentials.xlsx', header=0, index_col='Program').to_dict()
 user = credentials['User']['Probat read']
@@ -34,11 +33,8 @@ query = """ SELECT
                 ,[CUSTOMER_CODE] ASC           	
                 ,[ROASTER] ASC """
 
-# Read query and create Profit calculation:
+# Read query into dataframe:
 df = pd.read_sql(query, con)
-
-print(df)
-
 
 # Create timestamp and other variables
 now = datetime.datetime.now()
@@ -60,12 +56,11 @@ for recipe in recipes:
             dfEndTemp['CumSum end temp diff'] = dfEndTemp['End temp subtracted mean'].cumsum()
             # Find max and min values of end temp subtracted mean
             endTempDiff = dfEndTemp['End temp subtracted mean'].max() - dfEndTemp['End temp subtracted mean'].min()
-            
+
 
             endTempRows = dfEndTemp.index.max() #No. of rows in dataframe for iteration
 
-            
-            
+
             print(dfEndTemp)
             print(endTempAvg)
             print(endTempRows)
