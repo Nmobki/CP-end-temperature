@@ -48,19 +48,19 @@ Recipes = Df.Recipe.unique()
 # Lav en function der laver increment på dictionary med keys over, under, lig med
 Count_Diff = {}
 
-def diff_counter(dictionary, recipe, Diff_Org, Diff_New):
-    dictionary[recipe]['Org greater']['Count'] = 0
-    dictionary[recipe]['Equal']['Count'] = 0
-    dictionary[recipe]['Org lower']['Count'] = 0
-    dictionary[recipe]['Total']['Count'] = 0
+
+def Diff_counter(Diff_Org, Diff_New, Counter_List):
     if Diff_Org > Diff_New:
-        dictionary[recipe]['Org greater']['Count'] += 1
+       Counter_List[0] += 1
     if Diff_Org == Diff_New:
-        dictionary[recipe]['Equal']['Count'] += 1
+        Counter_List[1] += 1
     if Diff_Org < Diff_New:
-        dictionary[recipe]['Org lower']['Count'] += 1
-    dictionary[recipe]['Total']['Count'] += 1
+       Counter_List[2] += 1
+    Counter_List[3] += 1
     
+def Reset_Counters(Counters):
+    for Counter in Counters:
+        Counter = 0 
 
 for Recipe in Recipes:
         for Roaster in Roasters:
@@ -76,16 +76,24 @@ for Recipe in Recipes:
             Diff_EndTemp_Org = Df_EndTemp['CumSum end temp diff'].max() - Df_EndTemp['CumSum end temp diff'].min()
             
             # Create reordered dataframe, repeat calculations
-            i = 0
-            for i in range(1000):
+            I = 0
+            Count_G = []
+            Count_E = []
+            Count_L = []
+            Count_T = []
+            Counter_List = [0,0,0,0] #Greater than, Equal, Less than, Total
+
+            for I in range(1000):
                 Df_Temp = Df_EndTemp.sample(frac=1, replace=False, random_state=random.randint(1,999999))
                 Df_Temp['CumSum end temp diff'] = Df_Temp['End temp subtracted mean'].cumsum()
                 # Find max and min values of end temp subtracted mean
                 Diff_Temp_Temp = Df_Temp['CumSum end temp diff'].max() - Df_Temp['CumSum end temp diff'].min()
-                diff_counter(Count_Diff, Recipe, Diff_EndTemp_Org, Diff_Temp_Temp)
                 
-                i += 1
-                print(Count_Diff)
+                Diff_counter(Diff_EndTemp_Org, Diff_Temp_Temp, Counter_List)
+                
+                I += 1
+                print(Counter_List)
+                print(I)
             
             endTempRows = Df_EndTemp.index.max() #No. of rows in dataframe for iteration
 
