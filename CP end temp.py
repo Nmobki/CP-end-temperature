@@ -28,8 +28,6 @@ query = """ SELECT
                 ,AVG([FINAL_TEMP_ROASTING] / 10.0) AS [End temp]
             FROM [dbo].[PRO_EXP_BATCH_DATA_ROASTER]
 			WHERE DATEADD(d,DATEDIFF(d,0,[RECORDING_DATE]),0) > DATEADD(d,DATEDIFF(d,0,GETDATE())-365,0)
-                AND [CUSTOMER_CODE] = '10401005'
-                AND [ROASTER] = 'R2'
             GROUP BY
             	DATEADD(d,DATEDIFF(d,0,[RECORDING_DATE]),0)
             	,[ROASTER]
@@ -38,7 +36,10 @@ query = """ SELECT
                 DATEADD(d,DATEDIFF(d,0,[RECORDING_DATE]),0) ASC
                 ,[CUSTOMER_CODE] ASC           	
                 ,[ROASTER] ASC """
-
+# =============================================================================
+#                 AND [CUSTOMER_CODE] = '10401005'
+#                 AND [ROASTER] = 'R2'
+# =============================================================================
 # =============================================================================
 # Variables
 # =============================================================================
@@ -94,41 +95,43 @@ for recipe in recipes:
             # Filter dataframe
             df_endtemp = df.loc[df['Recipe'] == recipe]
             df_endtemp = df_endtemp.loc[df['ROASTER'] == roaster]
-            # Calculate mean for filtered dataframe
-            avg_endtemp = df_endtemp['End temp'].mean()
-            # Subtract mean from each datapoint and sum cumulative
-            df_endtemp['End temp subtracted mean'] = df_endtemp['End temp'] - avg_endtemp
-            df_endtemp['CumSum end temp diff'] = df_endtemp['End temp subtracted mean'].cumsum()
-            # Find max and min values of end temp subtracted mean
-            diff_endtemp_org = df_endtemp['CumSum end temp diff'].max() - df_endtemp['CumSum end temp diff'].min()
-            
-            # Create reordered dataframe, repeat calculations
-            i = 0
-            counter_list = [0,0,0,0] # Greater than, Equal, Less than, Total
-
-            for i in range(1000):
-                df_temp = df_endtemp.sample(frac=1, replace=False, random_state=random.randint(1,999999))
-                df_temp['CumSum end temp diff'] = df_temp['End temp subtracted mean'].cumsum()
+            if len(df_endtemp) > 0:
+                # Calculate mean for filtered dataframe
+                avg_endtemp = df_endtemp['End temp'].mean()
+                # Subtract mean from each datapoint and sum cumulative
+                df_endtemp['End temp subtracted mean'] = df_endtemp['End temp'] - avg_endtemp
+                df_endtemp['CumSum end temp diff'] = df_endtemp['End temp subtracted mean'].cumsum()
                 # Find max and min values of end temp subtracted mean
-                diff_temp_temp = df_temp['CumSum end temp diff'].max() - df_temp['CumSum end temp diff'].min()
-                # Add result of bootstrapping to counter
-                diff_counter(diff_endtemp_org, diff_temp_temp, counter_list)
+                diff_endtemp_org = df_endtemp['CumSum end temp diff'].max() - df_endtemp['CumSum end temp diff'].min()
                 
-                i += 1
-            # Log initial analysis to sql after bootstrapping
-            cp_count_sql = pd.DataFrame.from_dict({'Timestamp':[now], 'ExecutionId':[execution_id], 'No':[recipe],
-                            'No id2':[roaster], 'OrgDiff':[diff_endtemp_org], 'Script':[script_name],
-                            'CountGreater':counter_list[0] ,'CountEqual':counter_list[1], 
-                            'CountLess':counter_list[2] ,'CountIterations':counter_list[3]}, orient='columns')
-            insert_sql(cp_count_sql, 'ChangepointCounts',env)
-            # Add recipe and roaster to dataframe, if significance level is high enough
-            if data_is_significant(counter_list[0], counter_list[3], 0.95):
-                df_sign_recipes = df_sign_recipes.append({'Recipe': recipe, 'Roaster':roaster}, ignore_index=True)
+                # Create reordered dataframe, repeat calculations
+                i = 0
+                counter_list = [0,0,0,0] # Greater than, Equal, Less than, Total
+    
+                for i in range(1000):
+                    df_temp = df_endtemp.sample(frac=1, replace=False, random_state=random.randint(1,999999))
+                    df_temp['CumSum end temp diff'] = df_temp['End temp subtracted mean'].cumsum()
+                    # Find max and min values of end temp subtracted mean
+                    diff_temp_temp = df_temp['CumSum end temp diff'].max() - df_temp['CumSum end temp diff'].min()
+                    # Add result of bootstrapping to counter
+                    diff_counter(diff_endtemp_org, diff_temp_temp, counter_list)
+                    
+                    i += 1
+                # Log initial analysis to sql after bootstrapping
+                cp_count_sql = pd.DataFrame.from_dict({'Timestamp':[now], 'ExecutionId':[execution_id], 'No':[recipe],
+                                'No id2':[roaster], 'OrgDiff':[diff_endtemp_org], 'Script':[script_name],
+                                'CountGreater':counter_list[0] ,'CountEqual':counter_list[1], 
+                                'CountLess':counter_list[2] ,'CountIterations':counter_list[3]}, orient='columns')
+                insert_sql(cp_count_sql, 'ChangepointCounts',env)
+                # Add recipe and roaster to dataframe, if significance level is high enough
+                if data_is_significant(counter_list[0], counter_list[3], 0.95):
+                    df_sign_recipes = df_sign_recipes.append({'Recipe': recipe, 'Roaster':roaster}, ignore_index=True)
+    
+    
+    
+                # For development purposes only
+                df_endtemp.plot(x='Date',y='CumSum end temp diff')
 
-
-
-            # For development purposes only
-            df_endtemp.plot(x='Date',y='CumSum end temp diff')
 # =============================================================================
 # Dataframe for logging
 # =============================================================================
