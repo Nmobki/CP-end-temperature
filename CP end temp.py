@@ -104,7 +104,7 @@ for recipe in recipes:
             
             # Create reordered dataframe, repeat calculations
             i = 0
-            counter_list = [0,0,0,0] #Greater than, Equal, Less than, Total
+            counter_list = [0,0,0,0] # Greater than, Equal, Less than, Total
 
             for i in range(1000):
                 df_temp = df_endtemp.sample(frac=1, replace=False, random_state=random.randint(1,999999))
@@ -115,7 +115,7 @@ for recipe in recipes:
                 diff_counter(diff_endtemp_org, diff_temp_temp, counter_list)
                 
                 i += 1
-            
+            # Log initial analysis to sql after bootstrapping
             cp_count_sql = pd.DataFrame.from_dict({'Timestamp':[now], 'ExecutionId':[execution_id], 'No':[recipe],
                             'No id2':[roaster], 'OrgDiff':[diff_endtemp_org], 'Script':[script_name],
                             'CountGreater':counter_list[0] ,'CountEqual':counter_list[1], 
