@@ -42,7 +42,6 @@ query = """ SELECT
 # =============================================================================
 # Variables
 # =============================================================================
-
 # change env variable below to switch between dev and prod SQL tables for inserts
 env = 'dev'
 # Read query into dataframe and create unique lists for iteration:
@@ -56,12 +55,12 @@ engine = create_engine('mssql+pyodbc:///?odbc_connect=%s' % params)
 now = datetime.datetime.now()
 script_name = 'CP end temp.py'
 execution_id = int(now.timestamp())
-s_type = 'Recipes, end temperature' #Er denne her nødvendig?
+s_type = 'Recipes, end temperature' # Er denne her nødvendig?
+df_sign_recipes = pd.DataFrame(columns=['Recipe','Roaster'])
 
 # =============================================================================
 # Define functions 
 # =============================================================================
-
 # Count the number of times a change has occured and add 1 to list
 def diff_counter(diff_org, diff_new, counter_list):
     if diff_org > diff_new:
@@ -72,14 +71,24 @@ def diff_counter(diff_org, diff_new, counter_list):
        counter_list[2] += 1
     counter_list[3] += 1
 
+
+# Create list of of recipes with significant level of changes
+def define_significant_recipes(output_dataframe, recipe, roaster, greater_than_value, total_iterations, confidence_level):
+    if total_iterations == 0:
+        pass
+    else:
+        if greater_than_value / total_iterations >= confidence_level:
+            pd.concat([output_dataframe, pd.DataFrame({'Recipe':recipe, 'Roaster':roaster}, index=[0])])
+
+
 # Insert data into sql database
 def insert_sql(dataframe, table_name, schema):
     dataframe.to_sql(table_name, con=engine, schema=schema, if_exists='append', index=False)
 
-
-
    
-
+# =============================================================================
+# Do initial analysis and bootstrapping
+# =============================================================================
 for recipe in recipes:
         for roaster in roasters:
             # Filter dataframe
@@ -102,13 +111,12 @@ for recipe in recipes:
                 df_temp['CumSum end temp diff'] = df_temp['End temp subtracted mean'].cumsum()
                 # Find max and min values of end temp subtracted mean
                 diff_temp_temp = df_temp['CumSum end temp diff'].max() - df_temp['CumSum end temp diff'].min()
-                
+                # Add result of bootstrapping to counter
                 diff_counter(diff_endtemp_org, diff_temp_temp, counter_list)
                 
                 i += 1
 
-            print(counter_list)
-
+            define_significant_recipes(df_sign_recipes, recipe, roaster, counter_list[0], counter_list[3], 0.95)
 
             # For development purposes only
             df_endtemp.plot(x='Date',y='CumSum end temp diff')
@@ -120,6 +128,7 @@ df_log = pd.DataFrame(data={'Date':now, 'Event':script_name, 'Note':'Execution i
 # =============================================================================
 # Insert SQL
 # =============================================================================
-insert_sql(df_log, 'Log', 'dbo')
+#insert_sql(df_log, 'Log', 'dbo')
 
 
+print(df_sign_recipes)
