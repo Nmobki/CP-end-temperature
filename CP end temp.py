@@ -58,9 +58,6 @@ def Diff_counter(Diff_Org, Diff_New, Counter_List):
        Counter_List[2] += 1
     Counter_List[3] += 1
     
-def Reset_Counters(Counters):
-    for Counter in Counters:
-        Counter = 0 
 
 for Recipe in Recipes:
         for Roaster in Roasters:
@@ -77,10 +74,6 @@ for Recipe in Recipes:
             
             # Create reordered dataframe, repeat calculations
             I = 0
-            Count_G = []
-            Count_E = []
-            Count_L = []
-            Count_T = []
             Counter_List = [0,0,0,0] #Greater than, Equal, Less than, Total
 
             for I in range(1000):
@@ -92,17 +85,9 @@ for Recipe in Recipes:
                 Diff_counter(Diff_EndTemp_Org, Diff_Temp_Temp, Counter_List)
                 
                 I += 1
-                print(Counter_List)
-                print(I)
-            
-            endTempRows = Df_EndTemp.index.max() #No. of rows in dataframe for iteration
 
+            print(Counter_List)
 
-            print(Df_EndTemp)
-            print(Avg_EndTemp)
-            print(endTempRows)
-            print(Diff_EndTemp_Org)
-            print(Df_Temp)
 
             # For development purposes only
             Df_EndTemp.plot(x='Date',y='CumSum end temp diff')
