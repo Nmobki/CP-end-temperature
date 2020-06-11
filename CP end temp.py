@@ -1,22 +1,27 @@
 #!/usr/bin/env python3
 
 from sqlalchemy import create_engine
-import pandas as pd
 import pyodbc
+import urllib
+import pandas as pd
 import datetime
 import random
 
-# Read login details for Probat
-Credentials = pd.read_excel(r'\\filsrv01\bki\11. Økonomi\04 - Controlling\NMO\22. Python\Credentials\Credentials.xlsx', header=0, index_col='Program').to_dict()
-User = Credentials['User']['Probat read']
-Password = Credentials['Password']['Probat read']
 
+# =============================================================================
+# Read data from SQL datasource into dataframe
+# =============================================================================
+
+# Read login details for Probat
+credentials = pd.read_excel(r'\\filsrv01\bki\11. Økonomi\04 - Controlling\NMO\22. Python\Credentials\Credentials.xlsx', header=0, index_col='Program').to_dict()
+user = credentials['User']['Probat read']
+password = credentials['Password']['Probat read']
 
 # Define server connection and SQL query:
-Server = '192.168.125.161'
-Db = 'BKI_IMP_EXP'
-Con = pyodbc.connect('DRIVER={SQL Server};SERVER=' + Server + ';DATABASE=' + Db + ';UID=' + User + ';PWD=' + Password)
-Query = """ SELECT
+server = '192.168.125.161'
+db = 'BKI_IMP_EXP'
+con = pyodbc.connect('DRIVER={SQL Server};SERVER=' + server + ';DATABASE=' + db + ';UID=' + user + ';PWD=' + password)
+query = """ SELECT
             	DATEADD(d,DATEDIFF(d,0,[RECORDING_DATE]),0) AS [Date]
             	,[ROASTER]
                 ,[CUSTOMER_CODE] AS [Recipe]
@@ -34,60 +39,87 @@ Query = """ SELECT
                 ,[CUSTOMER_CODE] ASC           	
                 ,[ROASTER] ASC """
 
-# Read query into dataframe:
-Df = pd.read_sql(Query, Con)
+# =============================================================================
+# Variables
+# =============================================================================
 
-# Create timestamp and other variables
-Now = datetime.datetime.now()
-ScriptName = 'CP end temp.py'
-ExecutionId = int(Now.timestamp())
-S_Type = 'Change point detection, end temperature'
-Roasters = Df.ROASTER.unique()
-Recipes = Df.Recipe.unique()
+# change env variable below to switch between dev and prod SQL tables for inserts
+env = 'dev'
+# Read query into dataframe and create unique lists for iteration:
+df = pd.read_sql(query, con)
+roasters = df.ROASTER.unique()
+recipes = df.Recipe.unique()
+# Variables for inserting data into sql database:
+params = urllib.parse.quote_plus('DRIVER={SQL Server Native Client 10.0};SERVER=sqlsrv04;DATABASE=BKI_Datastore;Trusted_Connection=yes')
+engine = create_engine('mssql+pyodbc:///?odbc_connect=%s' % params)
+# Other variables:
+now = datetime.datetime.now()
+script_name = 'CP end temp.py'
+execution_id = int(now.timestamp())
+s_type = 'Recipes, end temperature' #Er denne her nødvendig?
 
-# Lav en function der laver increment på dictionary med keys over, under, lig med
-Count_Diff = {}
+# =============================================================================
+# Define functions 
+# =============================================================================
+
+# Count the number of times a change has occured and add 1 to list
+def diff_counter(diff_org, diff_new, counter_list):
+    if diff_org > diff_new:
+       counter_list[0] += 1
+    if diff_org == diff_new:
+        counter_list[1] += 1
+    if diff_org < diff_new:
+       counter_list[2] += 1
+    counter_list[3] += 1
+
+# Insert data into sql database
+def insert_sql(dataframe, table_name, schema):
+    dataframe.to_sql(table_name, con=engine, schema=schema, if_exists='append', index=False)
 
 
-def Diff_counter(Diff_Org, Diff_New, Counter_List):
-    if Diff_Org > Diff_New:
-       Counter_List[0] += 1
-    if Diff_Org == Diff_New:
-        Counter_List[1] += 1
-    if Diff_Org < Diff_New:
-       Counter_List[2] += 1
-    Counter_List[3] += 1
-    
 
-for Recipe in Recipes:
-        for Roaster in Roasters:
+   
+
+for recipe in recipes:
+        for roaster in roasters:
             # Filter dataframe
-            Df_EndTemp = Df.loc[Df['Recipe'] == Recipe]
-            Df_EndTemp = Df_EndTemp.loc[Df['ROASTER'] == Roaster]
+            df_endtemp = df.loc[df['Recipe'] == recipe]
+            df_endtemp = df_endtemp.loc[df['ROASTER'] == roaster]
             # Calculate mean for filtered dataframe
-            Avg_EndTemp = Df_EndTemp['End temp'].mean()
+            avg_endtemp = df_endtemp['End temp'].mean()
             # Subtract mean from each datapoint and sum cumulative
-            Df_EndTemp['End temp subtracted mean'] = Df_EndTemp['End temp'] - Avg_EndTemp
-            Df_EndTemp['CumSum end temp diff'] = Df_EndTemp['End temp subtracted mean'].cumsum()
+            df_endtemp['End temp subtracted mean'] = df_endtemp['End temp'] - avg_endtemp
+            df_endtemp['CumSum end temp diff'] = df_endtemp['End temp subtracted mean'].cumsum()
             # Find max and min values of end temp subtracted mean
-            Diff_EndTemp_Org = Df_EndTemp['CumSum end temp diff'].max() - Df_EndTemp['CumSum end temp diff'].min()
+            diff_endtemp_org = df_endtemp['CumSum end temp diff'].max() - df_endtemp['CumSum end temp diff'].min()
             
             # Create reordered dataframe, repeat calculations
-            I = 0
-            Counter_List = [0,0,0,0] #Greater than, Equal, Less than, Total
+            i = 0
+            counter_list = [0,0,0,0] #Greater than, Equal, Less than, Total
 
-            for I in range(1000):
-                Df_Temp = Df_EndTemp.sample(frac=1, replace=False, random_state=random.randint(1,999999))
-                Df_Temp['CumSum end temp diff'] = Df_Temp['End temp subtracted mean'].cumsum()
+            for i in range(1000):
+                df_temp = df_endtemp.sample(frac=1, replace=False, random_state=random.randint(1,999999))
+                df_temp['CumSum end temp diff'] = df_temp['End temp subtracted mean'].cumsum()
                 # Find max and min values of end temp subtracted mean
-                Diff_Temp_Temp = Df_Temp['CumSum end temp diff'].max() - Df_Temp['CumSum end temp diff'].min()
+                diff_temp_temp = df_temp['CumSum end temp diff'].max() - df_temp['CumSum end temp diff'].min()
                 
-                Diff_counter(Diff_EndTemp_Org, Diff_Temp_Temp, Counter_List)
+                diff_counter(diff_endtemp_org, diff_temp_temp, counter_list)
                 
-                I += 1
+                i += 1
 
-            print(Counter_List)
+            print(counter_list)
 
 
             # For development purposes only
-            Df_EndTemp.plot(x='Date',y='CumSum end temp diff')
+            df_endtemp.plot(x='Date',y='CumSum end temp diff')
+# =============================================================================
+# Dataframe for logging
+# =============================================================================
+df_log = pd.DataFrame(data={'Date':now, 'Event':script_name, 'Note':'Execution id: ' + str(execution_id)}, index=[0])
+
+# =============================================================================
+# Insert SQL
+# =============================================================================
+insert_sql(df_log, 'Log', 'dbo')
+
+
