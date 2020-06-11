@@ -116,12 +116,11 @@ for recipe in recipes:
                 
                 i += 1
             
-            cp_count_sql = pd.DataFrame.from_dict({'Timestamp':now, 'ExecutionId':execution_id, 'No':recipe,
-                            'No id2':roaster, 'OrgDiff':diff_endtemp_org, 'Script':script_name,
+            cp_count_sql = pd.DataFrame.from_dict({'Timestamp':[now], 'ExecutionId':[execution_id], 'No':[recipe],
+                            'No id2':[roaster], 'OrgDiff':[diff_endtemp_org], 'Script':[script_name],
                             'CountGreater':counter_list[0] ,'CountEqual':counter_list[1], 
-                            'CountLess':counter_list[2] ,'CountIterations':counter_list[3]}, orient='index')
+                            'CountLess':counter_list[2] ,'CountIterations':counter_list[3]}, orient='columns')
             insert_sql(cp_count_sql, 'ChangepointCounts',env)
-            
             # Add recipe and roaster to dataframe, if significance level is high enough
             if data_is_significant(counter_list[0], counter_list[3], 0.95):
                 df_sign_recipes = df_sign_recipes.append({'Recipe': recipe, 'Roaster':roaster}, ignore_index=True)
