@@ -56,7 +56,7 @@ now = datetime.datetime.now()
 script_name = 'CP end temp.py'
 execution_id = int(now.timestamp())
 s_type = 'Recipes, end temperature' # Er denne her nødvendig?
-df_sign_recipes = pd.DataFrame(columns=['Recipe','Roaster'])
+df_sign_recipes = pd.DataFrame()
 
 # =============================================================================
 # Define functions 
@@ -73,12 +73,12 @@ def diff_counter(diff_org, diff_new, counter_list):
 
 
 # Create list of of recipes with significant level of changes
-def define_significant_recipes(output_dataframe, recipe, roaster, greater_than_value, total_iterations, confidence_level):
+def data_is_significant(greater_than_value, total_iterations, confidence_level):
     if total_iterations == 0:
         pass
     else:
         if greater_than_value / total_iterations >= confidence_level:
-            pd.concat([output_dataframe, pd.DataFrame({'Recipe':recipe, 'Roaster':roaster}, index=[0])])
+            return True
 
 
 # Insert data into sql database
@@ -115,8 +115,11 @@ for recipe in recipes:
                 diff_counter(diff_endtemp_org, diff_temp_temp, counter_list)
                 
                 i += 1
+            # Add recipe and roaster to dataframe, if significance level is high enough
+            if data_is_significant(counter_list[0], counter_list[3], 0.95):
+                df_sign_recipes = df_sign_recipes.append({'Recipe': recipe, 'Roaster':roaster}, ignore_index=True)
 
-            define_significant_recipes(df_sign_recipes, recipe, roaster, counter_list[0], counter_list[3], 0.95)
+
 
             # For development purposes only
             df_endtemp.plot(x='Date',y='CumSum end temp diff')
