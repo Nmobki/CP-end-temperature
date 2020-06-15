@@ -87,6 +87,11 @@ def data_is_significant(greater_than_value, total_iterations, confidence_level):
 # Insert data into sql database
 def insert_sql(dataframe, table_name, schema):
     dataframe.to_sql(table_name, con=engine, schema=schema, if_exists='append', index=False)
+    
+# Split dataframe in two
+def dataset_split(input_dataframe):
+    While len(input_dataframe) > 10:
+        df_temp = input_dataframe()
 
    
 # =============================================================================
@@ -129,7 +134,7 @@ for recipe in recipes:
                 if data_is_significant(counter_list[0], counter_list[3], 0.95):
                     df_sign_recipes = df_sign_recipes.append({'Recipe': recipe, 'Roaster':roaster}, ignore_index=True)
                     # For development purposes only
-                    df_endtemp.plot(x='Date',y='CumSum end temp diff')
+                    df_endtemp.plot(x='Date',y='CumSum end temp diff', label=recipe)
     
     
                 
