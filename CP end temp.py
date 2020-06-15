@@ -27,15 +27,18 @@ query = """ SELECT
                 ,[CUSTOMER_CODE] AS [Recipe]
                 ,AVG([FINAL_TEMP_ROASTING] / 10.0) AS [End temp]
             FROM [dbo].[PRO_EXP_BATCH_DATA_ROASTER]
-			WHERE DATEADD(d,DATEDIFF(d,0,[RECORDING_DATE]),0) > DATEADD(d,DATEDIFF(d,0,GETDATE())-365,0)
+			WHERE DATEADD(d,DATEDIFF(d,0,[RECORDING_DATE]),0) > DATEADD(month,DATEDIFF(month,0,GETDATE())-6,0)
+                 AND [CUSTOMER_CODE] IN ('10401005','10401523','10401009','10401057','10401207','10401522','10401028','10401087','10401054','10401510')
+                 AND [ROASTER] = 'R2'
             GROUP BY
             	DATEADD(d,DATEDIFF(d,0,[RECORDING_DATE]),0)
             	,[ROASTER]
                 ,[CUSTOMER_CODE]
+			HAVING COUNT(*) >= 3
             ORDER BY
                 DATEADD(d,DATEDIFF(d,0,[RECORDING_DATE]),0) ASC
                 ,[CUSTOMER_CODE] ASC           	
-                ,[ROASTER] ASC """
+                ,[ROASTER] ASC"""
 # =============================================================================
 #                 AND [CUSTOMER_CODE] = '10401005'
 #                 AND [ROASTER] = 'R2'
@@ -44,7 +47,7 @@ query = """ SELECT
 # Variables
 # =============================================================================
 # change env variable below to switch between dev and prod SQL tables for inserts
-env = 'dev'
+env = 'dev'             # dev = test || cp = prod
 # Read query into dataframe and create unique lists for iteration:
 df = pd.read_sql(query, con)
 roasters = df.ROASTER.unique()
@@ -56,7 +59,6 @@ engine = create_engine('mssql+pyodbc:///?odbc_connect=%s' % params)
 now = datetime.datetime.now()
 script_name = 'CP end temp.py'
 execution_id = int(now.timestamp())
-s_type = 'Recipes, end temperature' # Er denne her nødvendig?
 df_sign_recipes = pd.DataFrame()
 
 # =============================================================================
@@ -126,11 +128,11 @@ for recipe in recipes:
                 # Add recipe and roaster to dataframe, if significance level is high enough
                 if data_is_significant(counter_list[0], counter_list[3], 0.95):
                     df_sign_recipes = df_sign_recipes.append({'Recipe': recipe, 'Roaster':roaster}, ignore_index=True)
+                    # For development purposes only
+                    df_endtemp.plot(x='Date',y='CumSum end temp diff')
     
     
-    
-                # For development purposes only
-                df_endtemp.plot(x='Date',y='CumSum end temp diff')
+                
 
 # =============================================================================
 # Dataframe for logging
