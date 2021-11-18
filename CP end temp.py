@@ -90,8 +90,9 @@ def insert_sql(dataframe, table_name, schema):
     
 # Split dataframe in two
 def dataset_split(input_dataframe):
-    While len(input_dataframe) > 10:
-        df_temp = input_dataframe()
+    pass
+    # While len(input_dataframe) > 10:
+    #     df_temp = input_dataframe()
 
    
 # =============================================================================
